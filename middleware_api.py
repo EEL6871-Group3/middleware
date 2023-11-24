@@ -53,7 +53,7 @@ def get_node_capacity(node_name):
         logging.debug(f"Error getting node capacity: {result.stderr}")
         return None
 
-def spin_up_pod(args, pod_name):
+def spin_up_pod(args, pod_name, node_name):
     base_pod_name = "stress-ng-pod"
     unique_suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     pod_name = f"{base_pod_name}-{unique_suffix}-{pod_name}"
@@ -84,7 +84,24 @@ def spin_up_pod(args, pod_name):
     "metadata": {
         "name": pod_name
     },
-    "spec": {
+            "spec": {
+        "affinity": {
+            "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
+                        {
+                            "matchExpressions": [
+                                {
+                                    "key": "kubernetes.io/hostname",  
+                                    "operator": "In",
+                                    "values": [node_name]  
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
         "containers": [{
             "name": "stress-ng-container",
             "image": "polinux/stress-ng:latest",
@@ -166,11 +183,12 @@ def handle_post():
     data = request.json
     # print(data)
     # Extract job description from the payload
-    job_description = data.get('job')
+    job_description = data.get('job') 
     pod_name = data.get('name')
+    node_name = data.get('node')
     args = parse_input(job_description)
     # print(args)
-    res = spin_up_pod(args, pod_name)
+    res = spin_up_pod(args, pod_name, node_name)
     # print(job_description)
 
     # Return the pod_num as part of the JSON response
