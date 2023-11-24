@@ -53,10 +53,10 @@ def get_node_capacity(node_name):
         logging.debug(f"Error getting node capacity: {result.stderr}")
         return None
 
-def spin_up_pod(args):
+def spin_up_pod(args, pod_name):
     base_pod_name = "stress-ng-pod"
     unique_suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    pod_name = f"{base_pod_name}-{unique_suffix}"
+    pod_name = f"{base_pod_name}-{unique_suffix}-{pod_name}"
     if 'io' in args and 'vm' in args:
         stress_values = [
                 "stress-ng", 
@@ -167,9 +167,10 @@ def handle_post():
     # print(data)
     # Extract job description from the payload
     job_description = data.get('job')
+    pod_name = data.get('name')
     args = parse_input(job_description)
     # print(args)
-    res = spin_up_pod(args)
+    res = spin_up_pod(args, pod_name)
     # print(job_description)
 
     # Return the pod_num as part of the JSON response
