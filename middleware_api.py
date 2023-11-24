@@ -9,6 +9,9 @@ import requests
 import datetime
 from kubernetes import client, config
 import re
+import subprocess
+import json
+import logging
 
 
 config.load_kube_config()
@@ -34,6 +37,21 @@ def parse_input(input_str):
     if 'vm-bytes' not in args:
         args['vm-bytes'] = 0
     return args
+
+def get_node_capacity(node_name):
+    # Command to get node capacity
+    command = ['kubectl', 'get', 'node', node_name, '-o', 'json']
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        node_info = json.loads(result.stdout)
+        # Assuming the CPU capacity is provided in cores
+        cpu_capacity_cores = int(node_info['status']['capacity']['cpu'])
+        # Convert cores to nanocores
+        return cpu_capacity_cores * 1e9
+    else:
+        logging.debug(f"Error getting node capacity: {result.stderr}")
+        return None
 
 def spin_up_pod(args):
     base_pod_name = "stress-ng-pod"
@@ -78,17 +96,23 @@ def spin_up_pod(args):
 
 @app.route("/cpu", methods=["GET"])
 def get_cpu():
-
+    usage = {}
     api = client.CustomObjectsApi()
     k8s_nodes = api.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
-
-
     for stats in k8s_nodes['items']:
-        print("Node Name: %s\tCPU: %s\tMemory: %s" % (stats['metadata']['name'], stats['usage']['cpu'], stats['usage']['memory']))
+        node_name = stats['metadata']['name']
+        cpu_usage_nanoseconds = int(stats['usage']['cpu'].rstrip('n'))
+        cpu_capacity_nanocores = get_node_capacity(node_name)
+        # print("Node Name: %s\tCPU: %s\tMemory: %s" % (stats['metadata']['name'], stats['usage']['cpu'], stats['usage']['memory']))
+        if cpu_capacity_nanocores:
+                usage[node_name] = (cpu_usage_nanoseconds / cpu_capacity_nanocores) * 100
+                # print(f"Node: {node_name}, CPU Usage: {cpu_usage_percentage:.2f}%")
+        else:
+                logging.debug(f"Could not calculate CPU usage for node: {node_name}")
 
-    return jsonify({"cpu_usage": 1})
+    return jsonify(usage)
 
-@app.route("/delete-pods", methods=["GET"])
+# @app.route("/delete-pods", methods=["GET"])
 def delete_pods():
     v1 = client.CoreV1Api()
     pod_list = v1.list_namespaced_pod("default")
@@ -102,19 +126,22 @@ def delete_pods():
             api_response = v1.delete_namespaced_pod(pod.metadata.name, 'default')
             deleted_pod.append(pod.metadata.name)
             
-    return jsonify({"deleted_pod": deleted_pod})
+    return deleted_pod
+    # return jsonify({"deleted_pod": deleted_pod})
 
 
-@app.route("/pod-num", methods=["GET"])
+@app.route("/pod-num", methods=["POST"])
 def get_pod_num():
     v1 = client.CoreV1Api()
+    deleted_pods = delete_pods()
     pod_list = v1.list_namespaced_pod("default")
-    for pod in pod_list.items:
-        # print(pod)
-        print("%s\t%s\t%s" % (pod.metadata.name,
-                              pod.status.phase,
-                              pod.status.pod_ip))
-    return jsonify({"pod_num": len(pod_list.items)})
+    
+    # for pod in pod_list.items:
+    #     # print(pod)
+    #     print("%s\t%s\t%s" % (pod.metadata.name,
+    #                           pod.status.phase,
+    #                           pod.status.pod_ip))
+    return jsonify({"pod_num": len(pod_list.items), "deleted_pods": deleted_pods})
 
 @app.route('/pod', methods=['POST'])
 def handle_post():
@@ -124,7 +151,7 @@ def handle_post():
     # Extract job description from the payload
     job_description = data.get('job')
     args = parse_input(job_description)
-    print(args)
+    # print(args)
     res = spin_up_pod(args)
     # print(job_description)
 
