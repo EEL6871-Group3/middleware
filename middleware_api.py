@@ -84,24 +84,13 @@ def spin_up_pod(args, pod_name, node_name):
     "metadata": {
         "name": pod_name
     },
-            "spec": {
-        "affinity": {
-            "nodeAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "kubernetes.io/hostname",  
-                                    "operator": "In",
-                                    "values": [node_name]  
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        },
+    "spec": {
+        "nodeName": node_name,
+        "tolerations":[{
+            "key": "node-role.kubernetes.io/master",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+        }],
         "containers": [{
             "name": "stress-ng-container",
             "image": "polinux/stress-ng:latest",
@@ -199,4 +188,4 @@ if __name__ == "__main__":
     update_thread.daemon = True
     update_thread.start()
 
-    app.run(debug=True, port=5001)
+    app.run(port=5001)
