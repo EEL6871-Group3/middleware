@@ -12,10 +12,10 @@ import re
 import subprocess
 import json
 import logging
+import ast
 
 
 config.load_kube_config()
-
 app = Flask(__name__)
 cpu_usage = 0
 
@@ -30,12 +30,12 @@ def parse_input(input_str):
     args = re.findall(r"--([a-zA-Z-]+)\s+([^\s]+)", input_str)
     # print(args)
     args = {arg[0]: arg[1] for arg in args}
-    if 'io' not in args:
-        args['io'] = 0
-    if 'vm' not in args:
-        args['vm'] = 0
-    if 'vm-bytes' not in args:
-        args['vm-bytes'] = 0
+    # if 'io' not in args:
+    #     args['io'] = ' '
+    # if 'vm' not in args:
+    #     args['vm'] = ' '
+    # if 'vm-bytes' not in args:
+    #     args['vm-bytes'] = ' '
     return args
 
 def get_node_capacity(node_name):
@@ -57,6 +57,27 @@ def spin_up_pod(args):
     base_pod_name = "stress-ng-pod"
     unique_suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     pod_name = f"{base_pod_name}-{unique_suffix}"
+    if 'io' in args and 'vm' in args:
+        stress_values = [
+                "stress-ng", 
+                "--io", args["io"],
+                "--vm", args["vm"],
+                "--vm-bytes", args["vm-bytes"], 
+                "--timeout", args["timeout"]
+            ]
+    elif 'io' in args:
+        stress_values = [
+                "stress-ng", 
+                "--io", args["io"],
+                "--timeout", args["timeout"]
+            ]
+    else:
+        stress_values = [
+                "stress-ng",
+                "--vm", args["vm"],
+                "--vm-bytes", args["vm-bytes"], 
+                "--timeout", args["timeout"]
+            ]
     pod_manifest = {
     "apiVersion": "v1",
     "kind": "Pod",
@@ -67,17 +88,13 @@ def spin_up_pod(args):
         "containers": [{
             "name": "stress-ng-container",
             "image": "polinux/stress-ng:latest",
-            "args": [
-                "stress-ng", 
-                "--io", args["io"],
-                "--vm", args["vm"],
-                "--vm-bytes", args["vm-bytes"], 
-                "--timeout", args["timeout"]
-            ]
+            "args": stress_values
         }],
         "restartPolicy": "Never"
     }
-}
+} 
+
+    # print(pod_manifest)
     api_instance = client.CoreV1Api()
     namespace = 'default'
     try:
