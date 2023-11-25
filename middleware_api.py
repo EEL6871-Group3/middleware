@@ -145,7 +145,7 @@ def delete_pods():
         # print("%s\t%s\t%s" % (pod.metadata.name,
         #                       pod.status.phase,
         #                       pod.status.pod_ip))
-        if pod.status.phase == 'Succeeded':
+        if pod.status.phase == 'Succeeded' or pod.status.phase == 'Failed':
             api_response = v1.delete_namespaced_pod(pod.metadata.name, 'default')
             deleted_pod.append(pod.metadata.name)
             
@@ -159,11 +159,11 @@ def get_pod_num():
     deleted_pods = delete_pods()
     pod_list = v1.list_namespaced_pod("default")
     
-    # for pod in pod_list.items:
-    #     # print(pod)
-    #     print("%s\t%s\t%s" % (pod.metadata.name,
-    #                           pod.status.phase,
-    #                           pod.status.pod_ip))
+    for pod in pod_list.items:
+        # print(pod)
+        # print("%s\t%s\t%s" % (pod.metadata.name,
+        #                       pod.status.phase,
+        #                       pod.status.pod_ip))
     return jsonify({"pod_num": len(pod_list.items), "deleted_pods": deleted_pods})
 
 @app.route('/pod', methods=['POST'])
