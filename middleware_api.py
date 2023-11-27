@@ -20,11 +20,6 @@ app = Flask(__name__)
 cpu_usage = 0
 
 
-def update_value():
-    global cpu_usage
-    while True:
-        cpu_p = psutil.cpu_percent(interval=1)
-        cpu_usage = cpu_p
 
 def parse_input(input_str): 
     args = re.findall(r"--([a-zA-Z-]+)\s+([^\s]+)", input_str)
@@ -184,8 +179,4 @@ def handle_post():
     return jsonify({"success": True, "msg": res})
 
 if __name__ == "__main__":
-    update_thread = threading.Thread(target=update_value)
-    update_thread.daemon = True
-    update_thread.start()
-
-    app.run(port=5001)
+    app.run(port=5001, host="128.110.217.0")
