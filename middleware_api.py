@@ -159,7 +159,7 @@ def get_pod_num():
     deleted_pods = delete_pods()
     pod_list = v1.list_namespaced_pod("default")
     
-    for pod in pod_list.items:
+    # for pod in pod_list.items:
         # print(pod)
         # print("%s\t%s\t%s" % (pod.metadata.name,
         #                       pod.status.phase,
