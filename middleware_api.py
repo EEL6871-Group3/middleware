@@ -179,4 +179,4 @@ def handle_post():
     return jsonify({"success": True, "msg": res})
 
 if __name__ == "__main__":
-    app.run(port=5001, host="128.110.217.0")
+    app.run(port=5001, host="0.0.0.0")
