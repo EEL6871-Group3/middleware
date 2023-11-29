@@ -52,7 +52,7 @@ def spin_up_pod(args, pod_name, node_name):
     base_pod_name = "stress-ng-pod"
     unique_suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     pod_name = f"{base_pod_name}-{unique_suffix}-{pod_name}"
-    if 'io' in args and 'vm' in args:
+    if 'io' in args and 'vm' in args and 'vm-bytes' in args:
         stress_values = [
                 "stress-ng", 
                 "--io", args["io"],
@@ -151,11 +151,15 @@ def delete_pods():
 @app.route("/pod-num", methods=["POST"])
 def get_pod_num():
     v1 = client.CoreV1Api()
-    deleted_pods = delete_pods()
-    pod_list = v1.list_namespaced_pod("default")
     
+    deleted_pods = delete_pods()
+    data = request.json
+    node_name = data.get('node')
+    # pod_list = v1.list_namespaced_pod("default")
+    field_selector = 'spec.nodeName='+node_name
+    pod_list = v1.list_namespaced_pod(namespace = "default", watch=False, field_selector=field_selector)
     # for pod in pod_list.items:
-        # print(pod)
+    #     print(pod)
         # print("%s\t%s\t%s" % (pod.metadata.name,
         #                       pod.status.phase,
         #                       pod.status.pod_ip))
@@ -180,3 +184,4 @@ def handle_post():
 
 if __name__ == "__main__":
     app.run(port=5001, host="128.110.217.0")
+    # app.run(port=5000, host="127.0.0.1")
