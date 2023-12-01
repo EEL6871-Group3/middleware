@@ -182,5 +182,56 @@ def handle_post():
     # Return the pod_num as part of the JSON response
     return jsonify({"success": True, "msg": res})
 
+@app.route("/node", methods=["GET"])
+def get_nodes():
+    """return the list of nodes that is currently running.
+    if error occurs, return "success" = False, and "msg" with the error message
+    """
+
+    # TODO: implement the endpoint
+
+    success = True # no error occurs
+    if success:
+        res = {"success": True, "msg": "", "nodes": ["k8s-master", "k8s-worker1"]}
+    else:
+        res = {"success": False, "msg": "error XXX occurred", "nodes": []}
+    return jsonify(res)
+
+@app.route('/delete-node', methods=['POST'])
+def delete_node():
+    """delete a node in the cluster for scaling down. Node name in the payload
+    """
+    # Parse JSON payload
+    data = request.json
+    node_name = data.get('node') 
+
+    # TODO: delete the node
+    logging.info(f"deleting node {node_name}")
+    success = True # no error occurs
+    if success:
+        res = {"success": True, "msg": ""}
+    else:
+        res = {"success": False, "msg": "error XXX occurred"}
+
+    return jsonify(res)
+
+@app.route('/start-node', methods=['POST'])
+def start_node():
+    """start a node in the cluster for scaling up. Node name in the payload
+    """
+    # Parse JSON payload
+    data = request.json
+    node_name = data.get('node') 
+
+    # TODO: start the node
+    logging.info(f"starting node {node_name}")
+    success = True # no error occurs
+    if success:
+        res = {"success": True, "msg": ""}
+    else:
+        res = {"success": False, "msg": "error XXX occurred"}
+
+    return jsonify(res)
+
 if __name__ == "__main__":
     app.run(port=5001, host="0.0.0.0")
