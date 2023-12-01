@@ -182,10 +182,11 @@ def handle_post():
     # Return the pod_num as part of the JSON response
     return jsonify({"success": True, "msg": res})
 
-@app.route("/node", methods=["GET"])
+@app.route("/nodes", methods=["GET"])
 def get_nodes():
     """return the list of nodes that is currently running.
     if error occurs, return "success" = False, and "msg" with the error message
+    curl localhost:5001/node
     """
 
     # TODO: implement the endpoint
@@ -200,6 +201,8 @@ def get_nodes():
 @app.route('/delete-node', methods=['POST'])
 def delete_node():
     """delete a node in the cluster for scaling down. Node name in the payload
+
+    curl -X POST -H "Content-Type: application/json" -d '{"node": "k8s-worker1"}' http://localhost:5001/delete-node
     """
     # Parse JSON payload
     data = request.json
@@ -218,6 +221,8 @@ def delete_node():
 @app.route('/start-node', methods=['POST'])
 def start_node():
     """start a node in the cluster for scaling up. Node name in the payload
+
+    curl -X POST -H "Content-Type: application/json" -d '{"node": "k8s-worker1"}' http://localhost:5001/start-node
     """
     # Parse JSON payload
     data = request.json
