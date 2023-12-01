@@ -31,6 +31,7 @@ def parse_input(input_str):
     #     args['vm'] = ' '
     # if 'vm-bytes' not in args:
     #     args['vm-bytes'] = ' '
+    logging.debug(f"Parsed input arguments: {args}")
     return args
 
 def get_node_capacity(node_name):
@@ -42,10 +43,11 @@ def get_node_capacity(node_name):
         node_info = json.loads(result.stdout)
         # Assuming the CPU capacity is provided in cores
         cpu_capacity_cores = int(node_info['status']['capacity']['cpu'])
+        logging.info(f"Node {node_name} CPU capacity in cores: {cpu_capacity_cores}")
         # Convert cores to nanocores
         return cpu_capacity_cores * 1e9
     else:
-        logging.debug(f"Error getting node capacity: {result.stderr}")
+        logging.debug(f"Error getting node capacity for {node_name}: {result.stderr}")
         return None
 
 def spin_up_pod(args, pod_name, node_name):
@@ -100,8 +102,10 @@ def spin_up_pod(args, pod_name, node_name):
     namespace = 'default'
     try:
         api_response = api_instance.create_namespaced_pod(namespace, pod_manifest)
+        logging.info(f"Pod {pod_name} successfully created with status: {api_response.status}")
         return f"Pod {pod_name} created. Status: {api_response.status}"
     except client.ApiException as e:
+        logging.error(f"Exception in creating pod {pod_name}: {e}")
         return f"Exception when calling CoreV1Api->create_namespaced_pod: {e}"
 
 # def get_pods():
@@ -123,64 +127,89 @@ def get_cpu():
         cpu_capacity_nanocores = get_node_capacity(node_name)
         # print("Node Name: %s\tCPU: %s\tMemory: %s" % (stats['metadata']['name'], stats['usage']['cpu'], stats['usage']['memory']))
         if cpu_capacity_nanocores:
-                usage[node_name] = (cpu_usage_nanoseconds / cpu_capacity_nanocores) * 100
-                # print(f"Node: {node_name}, CPU Usage: {cpu_usage_percentage:.2f}%")
+            usage[node_name] = (cpu_usage_nanoseconds / cpu_capacity_nanocores) * 100
+            # print(f"Node: {node_name}, CPU Usage: {cpu_usage_percentage:.2f}%")
         else:
-                logging.debug(f"Could not calculate CPU usage for node: {node_name}")
+            logging.debug(f"Could not calculate CPU usage for node: {node_name}")
 
     return jsonify(usage)
 
 # @app.route("/delete-pods", methods=["GET"])
 def delete_pods():
-    v1 = client.CoreV1Api()
-    pod_list = v1.list_namespaced_pod("default")
-    deleted_pod = []
-    for pod in pod_list.items:
+    logging.info("Initiating deletion of completed/failed pods")
+    try:
+        v1 = client.CoreV1Api()
+        pod_list = v1.list_namespaced_pod("default")
+        deleted_pod = []
+        for pod in pod_list.items:
         # # print(pod)
         # print("%s\t%s\t%s" % (pod.metadata.name,
         #                       pod.status.phase,
         #                       pod.status.pod_ip))
-        if pod.status.phase == 'Succeeded' or pod.status.phase == 'Failed':
-            api_response = v1.delete_namespaced_pod(pod.metadata.name, 'default')
-            deleted_pod.append(pod.metadata.name)
-            
-    return deleted_pod
-    # return jsonify({"deleted_pod": deleted_pod})
+            if pod.status.phase == 'Succeeded' or pod.status.phase == 'Failed':
+                api_response = v1.delete_namespaced_pod(pod.metadata.name, 'default')
+                deleted_pod.append(pod.metadata.name)
+
+        logging.info(f"Deleted pods: {deleted_pod}")
+        return deleted_pod
+        # return jsonify({"deleted_pod": deleted_pod})
+    except Exception as e:
+        logging.error(f"Error in delete_pods: {e}")
+        return []
 
 
 @app.route("/pod-num", methods=["POST"])
 def get_pod_num():
-    v1 = client.CoreV1Api()
-    
-    deleted_pods = delete_pods()
-    data = request.json
-    node_name = data.get('node')
-    # pod_list = v1.list_namespaced_pod("default")
-    field_selector = 'spec.nodeName='+node_name
-    pod_list = v1.list_namespaced_pod(namespace = "default", watch=False, field_selector=field_selector)
-    # for pod in pod_list.items:
-    #     print(pod)
+    logging.info("Received POST request to /pod-num endpoint")
+    try:
+        v1 = client.CoreV1Api()
+
+        deleted_pods = delete_pods()
+        data = request.json
+        node_name = data.get('node')
+        # pod_list = v1.list_namespaced_pod("default")
+        field_selector = 'spec.nodeName='+node_name
+        pod_list = v1.list_namespaced_pod(namespace = "default", watch=False, field_selector=field_selector)
+        pod_count = len(pod_list.items)
+        logging.info(f"Number of pods on node {node_name}: {pod_count}")
+        # for pod in pod_list.items:
+        #     print(pod)
         # print("%s\t%s\t%s" % (pod.metadata.name,
         #                       pod.status.phase,
         #                       pod.status.pod_ip))
-    return jsonify({"pod_num": len(pod_list.items), "deleted_pods": deleted_pods})
+        return jsonify({"pod_num": len(pod_list.items), "deleted_pods": deleted_pods})
+    except Exception as e:
+        logging.error(f"Error in get_pod_num: {e}")
+        return jsonify({"success": False, "msg": str(e)}), 500
 
 @app.route('/pod', methods=['POST'])
 def handle_post():
-    # Parse JSON payload
-    data = request.json
-    # print(data)
-    # Extract job description from the payload
-    job_description = data.get('job') 
-    pod_name = data.get('name')
-    node_name = data.get('node')
-    args = parse_input(job_description)
-    # print(args)
-    res = spin_up_pod(args, pod_name, node_name)
-    # print(job_description)
+    logging.info("Received POST request to /pod endpoint")
+    try:
+        # Parse JSON payload
+        data = request.json
+        logging.debug(f"Request data: {data}")
+        # print(data)
+        # Extract job description from the payload
+        job_description = data.get('job')
+        pod_name = data.get('name')
+        node_name = data.get('node')
+        args = parse_input(job_description)   
+        # print(args)
+        res = spin_up_pod(args, pod_name, node_name)
+        logging.info(f"Pod creation response: {res}")
+        # print(job_description)
 
-    # Return the pod_num as part of the JSON response
-    return jsonify({"success": True, "msg": res})
+        # Return the pod_num as part of the JSON response
+        return jsonify({"success": True, "msg": res})
+    except Exception as e:
+        logging.error(f"Error in handle_post: {e}")
+        return jsonify({"success": False, "msg": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(port=5001, host="0.0.0.0")
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.info("Starting Flask application on port 5001")
+    try:
+        app.run(port=5001, host="0.0.0.0")
+    except Exception as e:
+        logging.critical(f"Flask application failed to start: {e}")
