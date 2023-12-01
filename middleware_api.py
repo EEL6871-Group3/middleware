@@ -186,7 +186,7 @@ def handle_post():
 def get_nodes():
     """return the list of nodes that is currently running.
     if error occurs, return "success" = False, and "msg" with the error message
-    curl localhost:5001/node
+    curl localhost:5001/nodes
     """
 
     # TODO: implement the endpoint
