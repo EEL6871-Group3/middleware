@@ -213,14 +213,22 @@ def get_nodes():
     curl localhost:5001/nodes
     """
 
-    # TODO: implement the endpoint
-
-    success = True # no error occurs
-    if success:
-        res = {"success": True, "msg": "", "nodes": ["k8s-master", "k8s-worker1"]}
-    else:
-        res = {"success": False, "msg": "error XXX occurred", "nodes": []}
-    return jsonify(res)
+    # implement the endpoint
+    api_instance = client.CoreV1Api()
+    try:
+        # Retrieve the list of nodes
+        nodes_all = api_instance.list_node()
+        nodes_list = []
+        for node in nodes_all.items:
+            node_name = node.metadata.name
+            if node_name != 'k8s-master':
+                nodes_list.append(node_name)
+        logging.info(f"Get nodes: {nodes_list}")
+        return jsonify({"success": False, "msg": "error XXX occurred", "nodes": nodes_list})
+        
+    except Exception as e:
+        logging.error(f"Error in get_nodes: {e}")
+        return jsonify({"success": False, "msg": "error XXX occurred", "nodes": []})
 
 @app.route('/delete-node', methods=['POST'])
 def delete_node():
@@ -232,15 +240,17 @@ def delete_node():
     data = request.json
     node_name = data.get('node') 
 
-    # TODO: delete the node
-    logging.info(f"deleting node {node_name}")
-    success = True # no error occurs
-    if success:
-        res = {"success": True, "msg": ""}
-    else:
-        res = {"success": False, "msg": "error XXX occurred"}
+    api_instance = client.CoreV1Api()
 
-    return jsonify(res)
+    try:
+        # Delete the node
+        api_instance.delete_node(node_name)
+        logging.info(f"deleting node {node_name}")
+        return jsonify({"success": True, "msg": ""})
+    
+    except Exception as e:
+        logging.error(f"Error in delete_node: {e}")
+        return jsonify({"success": False, "msg": "error occurred"})
 
 @app.route('/start-node', methods=['POST'])
 def start_node():
@@ -252,15 +262,22 @@ def start_node():
     data = request.json
     node_name = data.get('node') 
 
-    # TODO: start the node
-    logging.info(f"starting node {node_name}")
-    success = True # no error occurs
-    if success:
-        res = {"success": True, "msg": ""}
-    else:
-        res = {"success": False, "msg": "error XXX occurred"}
+    # start the node
+    api_instance = client.CoreV1Api()
+    metadata = client.V1ObjectMeta(name=node_name)
+    node_spec = client.V1NodeSpec()
 
-    return jsonify(res)
+    node = client.V1Node(metadata=metadata, spec=node_spec)
+
+    try:
+        # Create the node
+        api_instance.create_node(node)
+        logging.info(f"starting node {node_name}")
+        return jsonify({"success": True, "msg": ""})
+    
+    except Exception as e:
+        logging.error(f"Error in start_node: {e}")
+        return jsonify({"success": False, "msg": "error occurred"})
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
