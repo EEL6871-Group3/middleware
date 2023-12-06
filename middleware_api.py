@@ -120,7 +120,10 @@ def spin_up_pod(args, pod_name, node_name):
 def get_cpu():
     usage = {}
     api = client.CustomObjectsApi()
+    # api = api_instance = client.CoreV1Api()
     k8s_nodes = api.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
+    k8s_nodes = api.list_node()
+
     for stats in k8s_nodes['items']:
         node_name = stats['metadata']['name']
         cpu_usage_nanoseconds = int(stats['usage']['cpu'].rstrip('n'))
@@ -221,8 +224,7 @@ def get_nodes():
         nodes_list = []
         for node in nodes_all.items:
             node_name = node.metadata.name
-            if node_name != 'k8s-master':
-                nodes_list.append(node_name)
+            nodes_list.append(node_name)
         logging.info(f"Get nodes: {nodes_list}")
         return jsonify({"success": False, "msg": "error XXX occurred", "nodes": nodes_list})
         
