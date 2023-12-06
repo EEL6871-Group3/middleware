@@ -230,6 +230,32 @@ def get_nodes():
         logging.error(f"Error in get_nodes: {e}")
         return jsonify({"success": False, "msg": "error XXX occurred", "nodes": []})
 
+
+def evict_pods(node_name, api_instance):
+    # Get the node information
+    # node = api_instance.read_node(node_name)
+    # print(node)
+    pods = api_instance.list_namespaced_pod("default")
+    pods = [pod for pod in pods.items if pod.spec.node_name == node_name]
+
+    # Create an eviction for each pod on the node
+    for pod in pods:
+                delete_options = client.V1DeleteOptions(
+                    propagation_policy='Foreground',
+                    grace_period_seconds=1
+                )
+
+                try:
+                    api_instance.delete_namespaced_pod(
+                        name=pod.metadata.name,
+                        namespace=pod.metadata.namespace,
+                        body=delete_options
+                    )
+                    logging.info(f"Evicted pod {pod.metadata.name} from node {node_name}")
+                except ApiException as e:
+                    logging.error(f"Error evicting pod {pod.metadata.name} from node {node_name}: {e}")
+
+
 @app.route('/delete-node', methods=['POST'])
 def delete_node():
     """delete a node in the cluster for scaling down. Node name in the payload
@@ -241,7 +267,7 @@ def delete_node():
     node_name = data.get('node') 
 
     api_instance = client.CoreV1Api()
-
+    evict_pods(node_name,api_instance)
     try:
         # Delete the node
         api_instance.delete_node(node_name)
