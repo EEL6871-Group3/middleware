@@ -221,8 +221,7 @@ def get_nodes():
         nodes_list = []
         for node in nodes_all.items:
             node_name = node.metadata.name
-            if node_name != 'k8s-master':
-                nodes_list.append(node_name)
+            nodes_list.append(node_name)
         logging.info(f"Get nodes: {nodes_list}")
         return jsonify({"success": False, "msg": "error XXX occurred", "nodes": nodes_list})
         
