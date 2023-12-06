@@ -1,6 +1,6 @@
 # Middleware for Kubernetes Node Scaling and Stress Testing
 ## Overview
-This middleware is designed to facilitate dynamic scaling of nodes in a Kubernetes cluster and stress testing individual nodes. The primary functionalities include:
+This middleware is designed to facilitate dynamic scaling of nodes in a Kubernetes cluster and stress testing individual nodes, when instructed by the controller. The primary functionalities include:
 
 1. Cluster Scaling:
     - Start Node: Add a new node to the cluster.
@@ -201,3 +201,9 @@ response = requests.post('http://localhost:5001/start-node', json=payload)
 result = response.json()
 print(result)
 ```
+
+# RUN
+```bash
+python3 middleware_api.py
+```
+This will make api go live on http://128.110.217.71:5001 and http://127.0.0.1:5001
