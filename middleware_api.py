@@ -226,7 +226,7 @@ def get_nodes():
             node_name = node.metadata.name
             nodes_list.append(node_name)
         logging.info(f"Get nodes: {nodes_list}")
-        return jsonify({"success": False, "msg": "error XXX occurred", "nodes": nodes_list})
+        return jsonify({"success": True, "msg": "", "nodes": nodes_list})
         
     except Exception as e:
         logging.error(f"Error in get_nodes: {e}")
