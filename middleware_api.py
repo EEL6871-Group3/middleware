@@ -122,7 +122,7 @@ def get_cpu():
     api = client.CustomObjectsApi()
     # api = api_instance = client.CoreV1Api()
     k8s_nodes = api.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
-    k8s_nodes = api.list_node()
+    # k8s_nodes = api.list_node()
 
     for stats in k8s_nodes['items']:
         node_name = stats['metadata']['name']
